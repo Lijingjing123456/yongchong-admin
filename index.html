@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>宠物上门服务 · PC 管理后台</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, 'PingFang SC', sans-serif; background: #F5F2EE; color: #333; }
+  header { background: linear-gradient(135deg, #FF8C42, #FFA85C); color: #fff; padding: 20px 32px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { margin: 0; font-size: 20px; }
+  header .user { font-size: 14px; }
+  header .user button { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: #fff; padding: 6px 14px; border-radius: 14px; cursor: pointer; font-size: 12px; margin-left: 12px; }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  /* 登录 */
+  .login-box { max-width: 380px; margin: 80px auto; background: #fff; border-radius: 16px; padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+  .login-box h2 { margin-top: 0; }
+  .login-box input { width: 100%; padding: 12px 14px; margin: 10px 0; border: 1px solid #eee; border-radius: 8px; font-size: 14px; }
+  .login-box button.primary { width: 100%; background: #FF8C42; color: #fff; border: none; padding: 12px; border-radius: 8px; font-size: 15px; cursor: pointer; margin-top: 10px; }
+  .login-box .err { color: #E53935; font-size: 13px; margin-top: 8px; min-height: 20px; }
+  .login-box .hint { font-size: 12px; color: #999; margin-top: 16px; line-height: 1.7; }
+  .login-box .endpoint { display: flex; gap: 6px; align-items: center; }
+  .login-box .endpoint input { flex: 1; }
+
+  /* 主面板 */
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+  .tab { padding: 10px 20px; background: #fff; border-radius: 10px 10px 0 0; cursor: pointer; font-size: 14px; color: #666; }
+  .tab.active { background: #FF8C42; color: #fff; font-weight: 600; }
+
+  .panel { background: #fff; border-radius: 0 12px 12px 12px; padding: 20px; min-height: 400px; }
+
+  /* 配置 */
+  .config-row { display: flex; align-items: center; padding: 16px 0; border-bottom: 1px solid #f3f0ec; }
+  .config-row label { flex: 1; font-size: 14px; }
+  .config-row input { width: 140px; padding: 8px 12px; border: 1px solid #eee; border-radius: 6px; }
+  .config-row .save-btn { background: #FF8C42; color: #fff; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; margin-left: 12px; }
+
+  /* 表格 */
+  .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar select, .toolbar input { padding: 8px 12px; border: 1px solid #eee; border-radius: 6px; font-size: 13px; }
+  .toolbar .refresh { background: #FF8C42; color: #fff; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #f3f0ec; }
+  th { background: #FAFAFA; color: #666; font-weight: 500; font-size: 12px; }
+  tr:hover { background: #FFFCF7; }
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; }
+  .tag-pending { background: #FFF3E0; color: #FF8C42; }
+  .tag-accepted { background: #E3F2FD; color: #1976D2; }
+  .tag-done { background: #E8F5E9; color: #66BB6A; }
+  .tag-cancelled { background: #F5F5F5; color: #999; }
+  .btn-mini { padding: 4px 12px; border: none; border-radius: 12px; cursor: pointer; font-size: 12px; margin-right: 4px; }
+  .btn-accept { background: #FFF3E0; color: #FF8C42; }
+  .btn-finish { background: #E8F5E9; color: #43A047; }
+  .btn-del { background: #FFEBEE; color: #E53935; }
+  .price { color: #FF8C42; font-weight: 600; }
+
+  .stats-row { display: flex; gap: 16px; margin-bottom: 20px; }
+  .stat-card { flex: 1; background: #fff; border-radius: 10px; padding: 20px; text-align: center; }
+  .stat-card .num { font-size: 28px; font-weight: 700; color: #FF8C42; }
+  .stat-card .label { font-size: 12px; color: #999; margin-top: 4px; }
+
+  .msg { padding: 10px 14px; border-radius: 6px; margin: 10px 0; font-size: 13px; }
+  .msg-ok { background: #E8F5E9; color: #2E7D32; }
+  .msg-err { background: #FFEBEE; color: #C62828; }
+  .hidden { display: none; }
+
+  /* 弹窗 */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; }
+  .modal-content { background: #fff; border-radius: 12px; width: 92%; max-width: 900px; max-height: 86vh; display: flex; flex-direction: column; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #f3f0ec; font-weight: 600; }
+  .modal-close { font-size: 22px; color: #999; cursor: pointer; padding: 0 6px; }
+  .modal-close:hover { color: #333; }
+  .modal-body { padding: 20px; overflow-y: auto; }
+
+  .breakdown { display: inline-flex; gap: 6px; font-size: 12px; }
+  .breakdown span { padding: 2px 8px; border-radius: 10px; background: #f5f5f5; }
+  .breakdown .b-pending { background: #FFF3E0; color: #FF8C42; }
+  .breakdown .b-accepted { background: #E3F2FD; color: #1976D2; }
+  .breakdown .b-done { background: #E8F5E9; color: #43A047; }
+  .breakdown .b-cancelled { background: #eee; color: #999; }
+
+  .order-detail-card { background: #fafaf7; border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+  .order-detail-card .row { display: flex; gap: 8px; font-size: 13px; margin-top: 6px; }
+  .order-detail-card .label { color: #999; min-width: 56px; }
+  .order-detail-card .head { display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 600; }
+  .order-detail-card .price { color: #FF8C42; font-weight: 700; font-size: 15px; }
+  .order-detail-card .note { color: #777; font-size: 12px; font-style: italic; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🐾 宠物上门服务 · PC 管理后台</h1>
+  <div class="user">
+    <span id="userInfo"></span>
+    <button onclick="logout()">退出</button>
+  </div>
+</header>
+
+<!-- 登录页 -->
+<div id="loginPage">
+  <div class="login-box">
+    <h2>管理员登录</h2>
+    <div class="endpoint">
+      <label style="font-size:12px;color:#999;width:60px;">云接入URL</label>
+    </div>
+    <input id="endpoint" placeholder="https://xxx.tcb-api.tencentcloudapi.com/web/..." />
+    <input id="username" placeholder="用户名" value="admin" />
+    <input id="password" type="password" placeholder="密码" />
+    <button class="primary" onclick="login()">登 录</button>
+    <div class="err" id="loginErr"></div>
+    <div class="hint">
+      首次部署云函数后默认账号：<br>
+      用户名 <b>admin</b> / 密码 <b>admin123</b><br>
+      登录后请在「修改密码」中立即改密
+    </div>
+  </div>
+</div>
+
+<!-- 主面板 -->
+<div id="mainPage" class="hidden">
+  <div class="container">
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card"><div class="num" id="statPending">-</div><div class="label">待接单</div></div>
+      <div class="stat-card"><div class="num" id="statDoing">-</div><div class="label">进行中</div></div>
+      <div class="stat-card"><div class="num" id="statDone">-</div><div class="label">已完成</div></div>
+      <div class="stat-card"><div class="num" id="statIncome">-</div><div class="label">累计收入 (元)</div></div>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="orders" onclick="switchTab('orders')">订单管理</div>
+      <div class="tab" data-tab="customers" onclick="switchTab('customers')">客户统计</div>
+      <div class="tab" data-tab="config" onclick="switchTab('config')">价格配置</div>
+      <div class="tab" data-tab="password" onclick="switchTab('password')">修改密码</div>
+    </div>
+
+    <!-- 订单 -->
+    <div id="tab-orders" class="panel">
+      <div class="toolbar">
+        <label>状态：</label>
+        <select id="filterStatus" onchange="loadOrders()">
+          <option value="all">全部</option>
+          <option value="pending">待接单</option>
+          <option value="accepted">进行中</option>
+          <option value="done">已完成</option>
+          <option value="cancelled">已取消</option>
+        </select>
+        <button class="refresh" onclick="loadOrders()">刷新</button>
+        <span style="margin-left:auto;color:#999;font-size:12px" id="orderCount"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>发布时间</th><th>类型</th><th>发布人</th><th>电话</th>
+            <th>宠物</th><th>地址</th><th>时间</th><th>价格</th>
+            <th>状态</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="orderTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- 客户统计 -->
+    <div id="tab-customers" class="panel hidden">
+      <div class="toolbar">
+        <button class="refresh" onclick="loadCustomers()">刷新</button>
+        <input id="customerSearch" placeholder="按姓名/手机号筛选" oninput="renderCustomers()" style="margin-left:12px;padding:8px 12px;border:1px solid #eee;border-radius:6px;font-size:13px;flex:1;max-width:240px;" />
+        <span style="margin-left:auto;color:#999;font-size:12px" id="customerCount"></span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>客户</th><th>手机号</th><th>下单次数</th>
+            <th>累计消费</th><th>已付金额</th>
+            <th>状态分布</th><th>首次下单</th><th>最近下单</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="customerTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- 客户订单详情弹窗 -->
+    <div id="customerModal" class="modal hidden" onclick="if(event.target===this)closeCustomerModal()">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span id="customerModalTitle">客户订单详情</span>
+          <span class="modal-close" onclick="closeCustomerModal()">×</span>
+        </div>
+        <div class="modal-body" id="customerModalBody"></div>
+      </div>
+    </div>
+
+    <!-- 配置 -->
+    <div id="tab-config" class="panel hidden">
+      <div id="configMsg"></div>
+      <div class="config-row">
+        <label>每次服务单价 (元)：<br><span style="color:#999;font-size:12px">"都需要"自动按 2 次计算</span></label>
+        <input id="priceInput" type="number" min="1" max="10000" />
+        <button class="save-btn" onclick="saveConfig()">保存</button>
+      </div>
+    </div>
+
+    <!-- 改密 -->
+    <div id="tab-password" class="panel hidden">
+      <div id="pwdMsg"></div>
+      <div style="max-width:340px;">
+        <div style="margin:14px 0;color:#666;">原密码</div>
+        <input id="oldPwd" type="password" style="width:100%;padding:10px;border:1px solid #eee;border-radius:6px;" />
+        <div style="margin:14px 0;color:#666;">新密码 (至少 6 位)</div>
+        <input id="newPwd" type="password" style="width:100%;padding:10px;border:1px solid #eee;border-radius:6px;" />
+        <button class="save-btn" style="margin-top:20px;width:100%;padding:12px;" onclick="changePwd()">修改密码</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ---------- 基础状态 ----------
+  let TOKEN = localStorage.getItem('adminToken') || ''
+  let ENDPOINT = localStorage.getItem('adminEndpoint') || ''
+  let USERNAME = localStorage.getItem('adminUsername') || ''
+  let CURRENT_TAB = 'orders'
+
+  if (ENDPOINT) document.getElementById('endpoint').value = ENDPOINT
+  if (TOKEN) showMain()
+  else showLogin()
+
+  // 链接样式
+  const styleEl = document.createElement('style')
+  styleEl.textContent = '.link { color: #FF8C42; cursor: pointer; text-decoration: underline; font-weight: 600; }'
+  document.head.appendChild(styleEl)
+
+  function showLogin() {
+    document.getElementById('loginPage').classList.remove('hidden')
+    document.getElementById('mainPage').classList.add('hidden')
+  }
+  function showMain() {
+    document.getElementById('loginPage').classList.add('hidden')
+    document.getElementById('mainPage').classList.remove('hidden')
+    document.getElementById('userInfo').textContent = '当前：' + USERNAME
+    loadStats(); loadOrders(); loadConfig()
+  }
+
+  // ---------- 通用请求 ----------
+  async function call(action, extra = {}) {
+    const res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, adminToken: TOKEN, ...extra })
+    })
+    const data = await res.json()
+    if (data && data.err) {
+      if (data.err.indexOf('会话') > -1 || data.err.indexOf('登录') > -1) {
+        logout(); throw new Error('登录已过期，请重新登录')
+      }
+      throw new Error(data.err)
+    }
+    return data
+  }
+
+  // ---------- 登录 ----------
+  async function login() {
+    const ep = document.getElementById('endpoint').value.trim()
+    const u = document.getElementById('username').value.trim()
+    const p = document.getElementById('password').value
+    document.getElementById('loginErr').textContent = ''
+    if (!ep) return document.getElementById('loginErr').textContent = '请填写云接入URL'
+    if (!u || !p) return document.getElementById('loginErr').textContent = '请输入用户名和密码'
+    try {
+      const res = await fetch(ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'adminLogin', username: u, password: p })
+      })
+      const data = await res.json()
+      if (data.err) return document.getElementById('loginErr').textContent = data.err
+      TOKEN = data.token; USERNAME = data.username
+      ENDPOINT = ep
+      localStorage.setItem('adminToken', TOKEN)
+      localStorage.setItem('adminEndpoint', ENDPOINT)
+      localStorage.setItem('adminUsername', USERNAME)
+      showMain()
+    } catch (e) {
+      document.getElementById('loginErr').textContent = '请求失败：' + e.message
+    }
+  }
+
+  async function logout() {
+    try { await call('adminLogout') } catch (e) {}
+    TOKEN = ''; USERNAME = ''
+    localStorage.removeItem('adminToken')
+    localStorage.removeItem('adminUsername')
+    showLogin()
+  }
+
+  // ---------- 统计 ----------
+  async function loadStats() {
+    try {
+      const s = await call('stats')
+      document.getElementById('statPending').textContent = (await call('allTasks', { status: 'pending' })).tasks.length
+      document.getElementById('statDoing').textContent = (await call('allTasks', { status: 'accepted' })).tasks.length
+      document.getElementById('statDone').textContent = s.doneCount || 0
+      document.getElementById('statIncome').textContent = '¥' + (s.income || 0)
+    } catch (e) { console.error(e) }
+  }
+
+  // ---------- 订单 ----------
+  async function loadOrders() {
+    const status = document.getElementById('filterStatus').value
+    try {
+      const res = await call('allTasks', status === 'all' ? {} : { status })
+      const tbody = document.getElementById('orderTbody')
+      tbody.innerHTML = ''
+      document.getElementById('orderCount').textContent = '共 ' + res.tasks.length + ' 条'
+      res.tasks.forEach(t => {
+        const tr = document.createElement('tr')
+        const created = new Date(t.createdAt)
+        const date = (created.getMonth()+1) + '-' + created.getDate() + ' ' + created.getHours() + ':' + String(created.getMinutes()).padStart(2,'0')
+        const typeMap = { feed: '🍖 仅喂养', walk: '🦮 仅遛狗', both: '🐾 都需要' }
+        const statusMap = { pending: '<span class="tag tag-pending">待接单</span>', accepted: '<span class="tag tag-accepted">进行中</span>', done: '<span class="tag tag-done">已完成</span>', cancelled: '<span class="tag tag-cancelled">已取消</span>' }
+        let ops = ''
+        if (t.status === 'pending') ops = `<button class="btn-mini btn-accept" onclick="opTask('${t._id}','accept')">接单</button>`
+        if (t.status === 'accepted') ops = `<button class="btn-mini btn-finish" onclick="opTask('${t._id}','finish')">完成</button>`
+        ops += `<button class="btn-mini btn-del" onclick="opTask('${t._id}','remove')">删除</button>`
+        tr.innerHTML = `
+          <td>${date}</td>
+          <td>${typeMap[t.serviceType] || t.serviceType}</td>
+          <td>${t.publisherName || ''}</td>
+          <td>${t.publisherPhone || ''}</td>
+          <td>${(t.petType==='dog'?'🐕':'🐈')}${t.petName} ×${t.petCount||1}</td>
+          <td title="${t.address||''}" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.address||''}</td>
+          <td>${t.date||''}<br>${t.timeSlot||''}</td>
+          <td class="price">¥${t.price}</td>
+          <td>${statusMap[t.status]||t.status}</td>
+          <td>${ops}</td>`
+        tbody.appendChild(tr)
+      })
+    } catch (e) { alert('加载失败：' + e.message) }
+  }
+
+  async function opTask(id, action) {
+    if (action === 'remove' && !confirm('确定删除该订单？')) return
+    try {
+      const extra = action === 'finish' ? { finishNote: '后台完成' } : {}
+      await call(action, { id, ...extra })
+      loadOrders(); loadStats()
+      if (CURRENT_TAB === 'customers') loadCustomers()
+    } catch (e) { alert('操作失败：' + e.message) }
+  }
+
+  // ---------- 配置 ----------
+  async function loadConfig() {
+    try {
+      const res = await call('getConfig')
+      document.getElementById('priceInput').value = res.config.pricePerService || 45
+    } catch (e) {}
+  }
+  async function saveConfig() {
+    const p = Number(document.getElementById('priceInput').value)
+    const msg = document.getElementById('configMsg')
+    try {
+      const res = await call('setConfig', { pricePerService: p })
+      msg.innerHTML = `<div class="msg msg-ok">保存成功，当前单价 ¥${res.config.pricePerService}</div>`
+      setTimeout(() => msg.innerHTML = '', 2500)
+    } catch (e) {
+      msg.innerHTML = `<div class="msg msg-err">保存失败：${e.message}</div>`
+    }
+  }
+
+  // ---------- 改密 ----------
+  async function changePwd() {
+    const o = document.getElementById('oldPwd').value
+    const n = document.getElementById('newPwd').value
+    const msg = document.getElementById('pwdMsg')
+    if (!o || !n) return msg.innerHTML = `<div class="msg msg-err">请输入原密码和新密码</div>`
+    try {
+      await call('changePassword', { oldPassword: o, newPassword: n })
+      msg.innerHTML = `<div class="msg msg-ok">密码修改成功，请用新密码重新登录</div>`
+      setTimeout(() => logout(), 1500)
+    } catch (e) {
+      msg.innerHTML = `<div class="msg msg-err">${e.message}</div>`
+    }
+  }
+
+  // ---------- 客户统计 ----------
+  let CUSTOMERS = []
+  async function loadCustomers() {
+    try {
+      const res = await call('customerStats')
+      CUSTOMERS = res.customers || []
+      document.getElementById('customerCount').textContent =
+        `共 ${res.totalCustomers || 0} 位客户，${res.totalOrders || 0} 个订单`
+      renderCustomers()
+    } catch (e) { alert('加载客户统计失败：' + e.message) }
+  }
+
+  function renderCustomers() {
+    const kw = (document.getElementById('customerSearch').value || '').trim().toLowerCase()
+    const list = kw
+      ? CUSTOMERS.filter(c =>
+          (c.publisherName || '').toLowerCase().includes(kw) ||
+          (c.publisherPhone || '').toLowerCase().includes(kw))
+      : CUSTOMERS
+    const tbody = document.getElementById('customerTbody')
+    tbody.innerHTML = ''
+    if (list.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#999;padding:30px">暂无客户</td></tr>'
+      return
+    }
+    const fmt = ts => {
+      const d = new Date(ts)
+      return (d.getMonth()+1) + '-' + d.getDate() + ' ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0')
+    }
+    list.forEach(c => {
+      const tr = document.createElement('tr')
+      tr.innerHTML = `
+        <td><b>${c.publisherName}</b></td>
+        <td>${c.publisherPhone || '<span style="color:#ccc">未填</span>'}</td>
+        <td><a class="link" onclick="showCustomerDetail('${c.key}','${c.publisherName}')">${c.orderCount}</a></td>
+        <td class="price">¥${c.totalAmount}</td>
+        <td>¥${c.paidAmount}</td>
+        <td><span class="breakdown">
+          ${c.breakdown.pending ? `<span class="b-pending">待 ${c.breakdown.pending}</span>` : ''}
+          ${c.breakdown.accepted ? `<span class="b-accepted">进行 ${c.breakdown.accepted}</span>` : ''}
+          ${c.breakdown.done ? `<span class="b-done">完成 ${c.breakdown.done}</span>` : ''}
+          ${c.breakdown.cancelled ? `<span class="b-cancelled">取消 ${c.breakdown.cancelled}</span>` : ''}
+        </span></td>
+        <td style="font-size:12px;color:#999">${fmt(c.firstOrderAt)}</td>
+        <td style="font-size:12px;color:#999">${fmt(c.lastOrderAt)}</td>
+        <td><button class="btn-mini btn-accept" onclick="showCustomerDetail('${c.key}','${c.publisherName}')">查看订单</button></td>`
+      tbody.appendChild(tr)
+    })
+  }
+
+  async function showCustomerDetail(key, name) {
+    document.getElementById('customerModalTitle').textContent = '【' + name + '】的订单详情'
+    const body = document.getElementById('customerModalBody')
+    body.innerHTML = '<div style="text-align:center;color:#999;padding:30px">加载中…</div>'
+    document.getElementById('customerModal').classList.remove('hidden')
+    try {
+      const res = await call('customerOrders', { key })
+      const orders = res.orders || []
+      if (orders.length === 0) {
+        body.innerHTML = '<div style="text-align:center;color:#999;padding:30px">该客户暂无订单</div>'
+        return
+      }
+      const typeMap = { feed: '🍖 仅喂养', walk: '🦮 仅遛狗', both: '🐾 都需要' }
+      const statusMap = {
+        pending: '<span class="tag tag-pending">待接单</span>',
+        accepted: '<span class="tag tag-accepted">进行中</span>',
+        done: '<span class="tag tag-done">已完成</span>',
+        cancelled: '<span class="tag tag-cancelled">已取消</span>'
+      }
+      const fmt = ts => {
+        const d = new Date(ts)
+        return (d.getFullYear()) + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0')
+            + ' ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2,'0')
+      }
+      body.innerHTML = orders.map(t => {
+        let ops = ''
+        if (t.status === 'pending') ops += `<button class="btn-mini btn-accept" onclick="opTask('${t._id}','accept');showCustomerDetail('${key}','${name}')">接单</button>`
+        if (t.status === 'accepted') ops += `<button class="btn-mini btn-finish" onclick="opTask('${t._id}','finish');showCustomerDetail('${key}','${name}')">完成</button>`
+        ops += `<button class="btn-mini btn-del" onclick="if(confirm('删除该订单?')){opTask('${t._id}','remove');showCustomerDetail('${key}','${name}')}">删除</button>`
+        return `
+          <div class="order-detail-card">
+            <div class="head">
+              <span>${typeMap[t.serviceType] || t.serviceType} ${statusMap[t.status] || t.status}</span>
+              <span class="price">¥${t.price}</span>
+            </div>
+            <div class="row"><span class="label">下单时间</span><span>${fmt(t.createdAt)}</span></div>
+            <div class="row"><span class="label">宠物</span><span>${(t.petType==='dog'?'🐕':'🐈')}${t.petName} ×${t.petCount||1}</span></div>
+            <div class="row"><span class="label">地址</span><span>${t.address || '-'}</span></div>
+            <div class="row"><span class="label">服务时间</span><span>${t.date || ''} ${t.timeSlot || ''}</span></div>
+            <div class="row"><span class="label">发布人</span><span>${t.publisherName || '-'} ${t.publisherPhone || ''}</span></div>
+            ${t.note ? `<div class="note">📝 ${t.note}</div>` : ''}
+            <div class="row" style="margin-top:10px;justify-content:flex-end">${ops}</div>
+          </div>`
+      }).join('')
+    } catch (e) {
+      body.innerHTML = '<div style="color:#E53935;padding:20px">加载失败：' + e.message + '</div>'
+    }
+  }
+
+  function closeCustomerModal() {
+    document.getElementById('customerModal').classList.add('hidden')
+  }
+
+  // ---------- Tab ----------
+  function switchTab(name) {
+    CURRENT_TAB = name
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name))
+    document.getElementById('tab-orders').classList.toggle('hidden', name !== 'orders')
+    document.getElementById('tab-customers').classList.toggle('hidden', name !== 'customers')
+    document.getElementById('tab-config').classList.toggle('hidden', name !== 'config')
+    document.getElementById('tab-password').classList.toggle('hidden', name !== 'password')
+    if (name === 'orders') loadOrders()
+    if (name === 'customers') loadCustomers()
+    if (name === 'config') loadConfig()
+  }
+</script>
+</body>
+</html>
